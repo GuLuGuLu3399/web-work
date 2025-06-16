@@ -1,8 +1,20 @@
 /**
  * OJ 管理页面工具函数
+ * 与后端接口完全对齐
  */
 
-import type { OJTestCase, FileMapEntry } from '@/types/oj-admin'
+import { api } from '@/api'
+import { http } from '@/api/http'
+import type { Result, OJTestCase } from '@/types/api'
+import type {
+  OJTestCaseCreateRequest,
+  OJProblem,
+  OJProblemCreateRequest,
+  FileMapEntry,
+  JudgeResult,
+  CodeSubmitRequest,
+  ApiResponse,
+} from '@/types/oj-admin'
 import { OJ_CONFIG, OJ_MESSAGES } from '@/config/oj-admin'
 
 /**
@@ -89,7 +101,12 @@ export class TestCaseUtils {
    * 创建新的测试用例
    */
   static createEmpty(): OJTestCase {
-    return { ...OJ_CONFIG.defaultTestCase }
+    return {
+      id: 0,
+      problemId: 0,
+      createdAt: new Date().toISOString(),
+      ...OJ_CONFIG.defaultTestCase,
+    }
   }
 
   /**
@@ -135,6 +152,64 @@ export class TestCaseUtils {
       const parsed = JSON.parse(json)
       return Array.isArray(parsed) ? parsed : []
     } catch {
+      return []
+    }
+  }
+
+  /**
+   * 批量创建测试用例（与后端对接）
+   */
+  static async batchCreate(
+    problemId: number,
+    testCases: OJTestCase[],
+  ): Promise<{
+    success: boolean
+    created: OJTestCase[]
+    errors: string[]
+  }> {
+    const results: OJTestCase[] = []
+    const errors: string[] = []
+
+    for (const testCase of testCases) {
+      if (!this.validate(testCase)) {
+        errors.push('测试用例输入输出不能为空')
+        continue
+      }
+
+      try {
+        const createRequest: OJTestCaseCreateRequest = {
+          problemId,
+          input: testCase.input,
+          output: testCase.output,
+        }
+
+        const response = await http.post<Result<OJTestCase>>('/oj/testcase', createRequest)
+        if (response.data.status && response.data.data) {
+          results.push(response.data.data as unknown as OJTestCase)
+        }
+      } catch (error) {
+        errors.push(`创建测试用例失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      }
+    }
+
+    return {
+      success: errors.length === 0,
+      created: results,
+      errors,
+    }
+  }
+
+  /**
+   * 获取题目的所有测试用例
+   */
+  static async getByProblemId(problemId: number): Promise<OJTestCase[]> {
+    try {
+      const response = await http.get<Result<OJTestCase[]>>(`/oj/problem/${problemId}/testcases`)
+      return response.data.status && response.data.data
+        ? (response.data.data as unknown as OJTestCase[])
+        : []
+    } catch (error) {
+      console.error('获取测试用例失败:', error)
       return []
     }
   }

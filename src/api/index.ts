@@ -11,6 +11,7 @@ import type {
   OJRequest,
   SubmitResponse,
   JudgeResult,
+  JudgeRequest,
 } from '@/types/api'
 import { http } from './http.ts'
 import type { AxiosResponse, AxiosError } from 'axios'
@@ -82,10 +83,22 @@ export const api = {
   deleteArticle: (id: number) => request<null>(http.delete(`/articles/${id}`)),
 
   /**
-   * 获取文章摘要列表
+   * 获取文章摘要列表 (支持分页)
+   * @param page 页码，默认为1
+   * @param pageSize 每页大小，默认为10
    * @returns Promise<ArticleSummary[]> 返回文章摘要数组
    */
-  getArticles: () => request<ArticleSummary[]>(http.get('/articles')),
+  getArticles: (page: number = 1, pageSize: number = 10) =>
+    request<ArticleSummary[]>(http.get(`/articles?page=${page}&pageSize=${pageSize}`)),
+
+  /**
+   * 更新文章
+   * @param id 文章ID
+   * @param article 文章内容对象(ArticleRequest类型)
+   * @returns Promise<null> 更新成功返回null
+   */
+  updateArticle: (id: number, article: ArticleRequest) =>
+    request<null>(http.put(`/articles/${id}`, article)),
 
   /**
    * 根据ID获取文章完整内容
@@ -98,16 +111,16 @@ export const api = {
   /**
    * 获取指定文章的所有评论
    * @param id 文章ID
-   * @returns Promise<string[]> 返回评论内容数组
+   * @returns Promise<Comment[]> 返回评论对象数组
    */
-  getCommentsByArticleId: (id: number) => request<string[]>(http.get(`/comments/${id}`)),
+  getCommentsByArticleId: (id: number) => request<Comment[]>(http.get(`/comments/${id}`)),
 
   /**
    * 提交新评论
    * @param comment 评论对象(Comment类型)
-   * @returns Promise<string> 返回操作结果消息
+   * @returns Promise<Comment> 返回创建的评论对象
    */
-  postComment: (comment: Comment) => request<string>(http.post(`/comments`, comment)),
+  postComment: (comment: Comment) => request<Comment>(http.post(`/comments`, comment)),
 
   // ===================== 在线评测(OJ)相关API =====================
   /**
@@ -149,8 +162,7 @@ export const api = {
     request<OJTestCase[]>(http.get(`/oj/testcase/${problemId}`)),
 
   // 提交代码
-  submitCode: (data: { tid: number; source_code: string; language_id: number }) =>
-    request<SubmitResponse>(http.post('/oj/judge', data)),
+  submitCode: (data: JudgeRequest) => request<SubmitResponse>(http.post('/oj/judge', data)),
 
   // 获取判题结果
   getJudgeResult: (token: string) => request<JudgeResult>(http.get(`/oj/judge?token=${token}`)),

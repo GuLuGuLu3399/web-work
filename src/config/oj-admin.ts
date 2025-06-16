@@ -1,9 +1,24 @@
 /**
  * OJ 管理页面配置数据
+ * 基于最新的后端接口设计
  */
 
-import { PlusIcon, EyeIcon, DocumentTextIcon, TrashIcon } from '@heroicons/vue/24/outline'
-import type { OJActionButton, OJConfig, OJTableColumn } from '@/types/oj-admin'
+import {
+  PlusIcon,
+  EyeIcon,
+  DocumentTextIcon,
+  TrashIcon,
+  PencilIcon,
+  PlayIcon,
+} from '@heroicons/vue/24/outline'
+import type { OJActionButton, OJConfig, OJTableColumn, LanguageConfig } from '@/types/oj-admin'
+
+// 本地枚举定义，避免导入问题
+enum DifficultyLevel {
+  Easy = 'Easy',
+  Medium = 'Medium',
+  Hard = 'Hard',
+}
 
 /**
  * 表格列配置
@@ -14,16 +29,46 @@ export const OJ_TABLE_COLUMNS: OJTableColumn[] = [
     label: 'ID',
     width: 'w-20',
     align: 'left',
+    sortable: true,
   },
   {
     key: 'title',
     label: '标题',
     align: 'left',
+    sortable: true,
+    filterable: true,
+  },
+  {
+    key: 'difficulty',
+    label: '难度',
+    width: 'w-24',
+    align: 'center',
+    sortable: true,
+    filterable: true,
+  },
+  {
+    key: 'timeLimit',
+    label: '时间限制',
+    width: 'w-24',
+    align: 'center',
+  },
+  {
+    key: 'memoryLimit',
+    label: '内存限制',
+    width: 'w-24',
+    align: 'center',
+  },
+  {
+    key: 'createdAt',
+    label: '创建时间',
+    width: 'w-32',
+    align: 'center',
+    sortable: true,
   },
   {
     key: 'actions',
     label: '操作',
-    width: 'w-48',
+    width: 'w-64',
     align: 'right',
   },
 ]
@@ -40,6 +85,15 @@ export const OJ_ACTION_BUTTONS: OJActionButton[] = [
     textColor: 'text-green-600',
     hoverBg: 'hover:bg-green-100',
     handler: 'handleAddTestCase',
+  },
+  {
+    type: 'edit',
+    icon: PencilIcon,
+    title: '编辑题目',
+    bgColor: 'bg-blue-50',
+    textColor: 'text-blue-600',
+    hoverBg: 'hover:bg-blue-100',
+    handler: 'handleEditProblem',
   },
   {
     type: 'preview',
@@ -81,6 +135,44 @@ export const OJ_CONFIG: OJConfig = {
     input: '',
     output: '',
   },
+  defaultProblem: {
+    difficulty: 'Easy',
+    timeLimit: 1000,
+    memoryLimit: 128,
+  },
+  difficulties: [DifficultyLevel.Easy, DifficultyLevel.Medium, DifficultyLevel.Hard],
+  languages: [
+    {
+      id: 71,
+      name: 'Python',
+      value: 'python3',
+      icon: '🐍',
+      template: '# Python 3\n\ndef solution():\n    pass\n\nsolution()',
+    },
+    {
+      id: 62,
+      name: 'Java',
+      value: 'java',
+      icon: '☕',
+      template:
+        'public class Main {\n    public static void main(String[] args) {\n        // Java code here\n    }\n}',
+    },
+    {
+      id: 63,
+      name: 'JavaScript',
+      value: 'javascript',
+      icon: '🟨',
+      template: '// JavaScript\n\nfunction solution() {\n    // Your code here\n}\n\nsolution();',
+    },
+    {
+      id: 54,
+      name: 'C++',
+      value: 'cpp',
+      icon: '⚡',
+      template:
+        '#include <iostream>\nusing namespace std;\n\nint main() {\n    // C++ code here\n    return 0;\n}',
+    },
+  ],
 }
 
 /**

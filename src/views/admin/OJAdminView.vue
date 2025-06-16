@@ -4,7 +4,7 @@ import { useAdminCrud } from '@/composables/useAdminCrud'
 import { PlusIcon, DocumentArrowUpIcon, ArrowDownTrayIcon, TrashIcon, MagnifyingGlassIcon, DocumentTextIcon } from '@heroicons/vue/24/outline'
 import { md } from '@/composables/useMarked'
 import { api } from '@/api'
-import type { OJProblem, OJTestCase, Result } from '@/types/api'
+import type { OJProblem, OJTestCase, OJRequest, Result } from '@/types/api'
 import AdminModal from '@/components/admin/AdminModal.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import { OJ_ACTION_BUTTONS, OJ_MESSAGES } from '@/config/oj-admin'
@@ -63,7 +63,15 @@ const {
     return result
   },
   create: async (problem) => {
-    const { status } = await api.postOJProblem(problem)
+    // 转换为 OJRequest 格式，只包含 API 期望的字段
+    const ojRequest: OJRequest = {
+      title: problem.title,
+      description: problem.description,
+      difficulty: problem.difficulty,
+      timeLimit: problem.timeLimit,
+      memoryLimit: problem.memoryLimit
+    }
+    const { status } = await api.postOJProblem(ojRequest)
     if (status) {
       clearCache() // 清除缓存
     }
@@ -84,7 +92,15 @@ const showTestCaseView = ref(false)
 const showContentPreview = ref(false)
 const currentProblemId = ref<number | null>(null)
 const previewContent = ref('')
-const newProblem = ref<Omit<OJProblem, 'id'>>({ title: '', content: '' })
+const newProblem = ref<Omit<OJProblem, 'id'>>({
+  title: '',
+  description: '',
+  difficulty: 'Easy',
+  timeLimit: 1000,
+  memoryLimit: 128,
+  createdAt: '',
+  updatedAt: ''
+})
 const testCases = ref<OJTestCase[]>([])
 const existingTestCases = ref<OJTestCase[]>([])
 const showConfirmDelete = ref(false)
@@ -100,7 +116,7 @@ const filteredProblems = computed(() => {
   const query = searchQuery.value.toLowerCase()
   return ojProblems.value.filter(problem =>
     problem.title.toLowerCase().includes(query) ||
-    problem.content.toLowerCase().includes(query)
+    problem.description.toLowerCase().includes(query)
   )
 })
 
@@ -133,7 +149,7 @@ const batchOperations = computed(() => [
       const problemFields = [
         commonFields.id,
         { key: 'title', label: '题目标题', type: 'string' as const },
-        { key: 'content', label: '题目内容', type: 'string' as const, formatter: (content: string) => content.substring(0, 100) + '...' },
+        { key: 'description', label: '题目内容', type: 'string' as const, formatter: (description: string) => description.substring(0, 100) + '...' },
         { key: 'createdAt', label: '创建时间', type: 'date' as const },
         { key: 'updatedAt', label: '更新时间', type: 'date' as const }
       ]
@@ -213,8 +229,8 @@ const createTestCases = async () => {
 }
 
 // Content and modals
-const showProblemContent = (content: string) => {
-  previewContent.value = md.render(content)
+const showProblemContent = (description: string) => {
+  previewContent.value = md.render(description)
   showContentPreview.value = true
 }
 
@@ -239,7 +255,7 @@ const actions = {
   },
 
   handlePreview: (problem: OJProblem) => {
-    showProblemContent(problem.content)
+    showProblemContent(problem.description)
   },
 
   handleViewTestCases: (problem: OJProblem) => {
@@ -299,9 +315,8 @@ const executeSingleDelete = async () => {
   <!-- v4.0 工具栏区域 -->
   <div class="space-y-4 mb-6">
     <!-- 统计和操作栏 -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
-         role="toolbar"
-         aria-label="OJ题目管理工具栏">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4" role="toolbar"
+      aria-label="OJ题目管理工具栏">
       <div class="flex items-center gap-4">
         <div class="text-sm text-gray-600 dark:text-gray-400" aria-live="polite" role="status">
           <span v-if="isFiltered && filteredProblems.length !== ojProblems.length">
@@ -318,8 +333,8 @@ const executeSingleDelete = async () => {
 
       <div class="flex items-center gap-2">
         <button @click="showProblemForm = true"
-                class="w-full sm:w-auto px-3 py-1.5 bg-purple-500 text-white text-sm rounded-lg flex items-center justify-center hover:bg-purple-600 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                aria-label="新建OJ题目">
+          class="w-full sm:w-auto px-3 py-1.5 bg-purple-500 text-white text-sm rounded-lg flex items-center justify-center hover:bg-purple-600 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+          aria-label="新建OJ题目">
           <PlusIcon class="h-4 w-4 mr-1" aria-hidden="true" />
           新建题目
         </button>
@@ -331,32 +346,20 @@ const executeSingleDelete = async () => {
       <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
         <MagnifyingGlassIcon class="h-4 w-4 text-gray-400" aria-hidden="true" />
       </div>
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="搜索题目标题或内容..."
-        :class="['w-full pl-10 pr-4 py-2 border rounded-lg', BASE_CLASSES.input]"
-        aria-label="搜索OJ题目"
-      />
+      <input v-model="searchQuery" type="text" placeholder="搜索题目标题或内容..."
+        :class="['w-full pl-10 pr-4 py-2 border rounded-lg', BASE_CLASSES.input]" aria-label="搜索OJ题目" />
     </div>
 
     <!-- v4.0 批量操作工具栏 -->
-    <BatchOperationToolbar
-      v-if="hasSelection"
-      :selected-count="selectedCount"
-      :total-count="filteredProblems.length"
-      :operations="batchOperations"
-      :is-processing="isBatchProcessing"
-      :progress="operationProgress"
+    <BatchOperationToolbar v-if="hasSelection" :selected-count="selectedCount" :total-count="filteredProblems.length"
+      :operations="batchOperations" :is-processing="isBatchProcessing" :progress="operationProgress"
       @execute-operation="(operation) => executeBatchOperation(operation, getSelectedItems(filteredProblems, (p) => p.id))"
-      @clear-selection="deselectAll"
-      @select-all="handleSelectAll"
-    />
+      @clear-selection="deselectAll" @select-all="handleSelectAll" />
   </div>
 
   <!-- v4.0 主要内容区域 -->
   <section class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
-           aria-labelledby="problems-table-title">
+    aria-labelledby="problems-table-title">
     <h2 id="problems-table-title" class="sr-only">OJ题目列表</h2>
 
     <!-- v4.0 空状态处理 -->
@@ -368,7 +371,7 @@ const executeSingleDelete = async () => {
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">暂无OJ题目</h3>
         <p class="text-gray-500 dark:text-gray-400 mb-4">创建您的第一个编程题目开始管理</p>
         <button @click="showProblemForm = true"
-                class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+          class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
           <PlusIcon class="w-4 h-4 mr-2 inline" />
           新建题目
         </button>
@@ -385,11 +388,11 @@ const executeSingleDelete = async () => {
         <p class="text-gray-500 dark:text-gray-400 mb-4">尝试调整搜索条件或创建新的题目</p>
         <div class="flex gap-2">
           <button @click="searchQuery = ''"
-                  class="px-4 py-2 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            class="px-4 py-2 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
             清除搜索
           </button>
           <button @click="showProblemForm = true"
-                  class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+            class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
             <PlusIcon class="w-4 h-4 mr-2 inline" />
             新建题目
           </button>
@@ -399,31 +402,22 @@ const executeSingleDelete = async () => {
 
     <!-- v4.0 虚拟滚动列表或普通列表 -->
     <div v-else-if="useVirtualList">
-      <VirtualList
-        :items="filteredProblems"
-        :item-height="80"
-        :container-height="600"
-        :selectable="true"
-        @select="handleVirtualListSelect"
-        class="virtual-problems-list"
-      >
+      <VirtualList :items="filteredProblems" :item-height="80" :container-height="600" :selectable="true"
+        @select="handleVirtualListSelect" class="virtual-problems-list">
         <template #item="{ item: problem }">
           <div class="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
             <!-- v4.0 批量选择复选框 -->
             <div class="flex-shrink-0">
-              <input
-                type="checkbox"
-                :checked="isSelected(problem.id)"
-                @change="toggleItem(problem.id)"
+              <input type="checkbox" :checked="isSelected(problem.id)" @change="toggleItem(problem.id)"
                 class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                :aria-label="`选择题目: ${problem.title}`"
-              />
+                :aria-label="`选择题目: ${problem.title}`" />
             </div>
 
             <!-- 题目信息 -->
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-3">
-                <span class="text-xs font-mono text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                <span
+                  class="text-xs font-mono text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
                   #{{ problem.id }}
                 </span>
                 <h3 class="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -431,22 +425,19 @@ const executeSingleDelete = async () => {
                 </h3>
               </div>
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
-                {{ problem.content.substring(0, 100) }}{{ problem.content.length > 100 ? '...' : '' }}
+                {{ problem.description.substring(0, 100) }}{{ problem.description.length > 100 ? '...' : '' }}
               </p>
             </div>
 
             <!-- 操作按钮 -->
             <div class="flex gap-1 flex-shrink-0">
               <button v-for="action in OJ_ACTION_BUTTONS" :key="action.type"
-                      @click="handleAction(action.handler, problem, $event)"
-                      :class="[
-                        'p-2 rounded-lg hover:scale-105 active:scale-95 transition-all duration-200 transform-gpu focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-sm',
-                        action.bgColor,
-                        action.textColor,
-                        action.hoverBg
-                      ]"
-                      :title="action.title"
-                      :aria-label="`${action.title}: ${problem.title}`">
+                @click="handleAction(action.handler, problem, $event)" :class="[
+                  'p-2 rounded-lg hover:scale-105 active:scale-95 transition-all duration-200 transform-gpu focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-sm',
+                  action.bgColor,
+                  action.textColor,
+                  action.hoverBg
+                ]" :title="action.title" :aria-label="`${action.title}: ${problem.title}`">
                 <component :is="action.icon" class="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
@@ -462,14 +453,10 @@ const executeSingleDelete = async () => {
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-4">
             <!-- 全选复选框 -->
-            <input
-              type="checkbox"
-              :checked="hasSelectedAll"
-              :indeterminate="hasSelection && !hasSelectedAll"
+            <input type="checkbox" :checked="hasSelectedAll" :indeterminate="hasSelection && !hasSelectedAll"
               @change="handleSelectAll"
               class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-              aria-label="全选题目"
-            />
+              aria-label="全选题目" />
             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
               {{ hasSelection ? `已选择 ${selectedCount} 项` : '选择题目' }}
             </span>
@@ -483,27 +470,21 @@ const executeSingleDelete = async () => {
 
       <!-- 表格内容 -->
       <div class="divide-y divide-gray-200 dark:divide-gray-700">
-        <div
-          v-for="problem in filteredProblems"
-          :key="problem.id"
+        <div v-for="problem in filteredProblems" :key="problem.id"
           class="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          :class="{ 'bg-purple-50 dark:bg-purple-900/10': isSelected(problem.id) }"
-        >
+          :class="{ 'bg-purple-50 dark:bg-purple-900/10': isSelected(problem.id) }">
           <!-- 批量选择复选框 -->
           <div class="flex-shrink-0">
-            <input
-              type="checkbox"
-              :checked="isSelected(problem.id)"
-              @change="toggleItem(problem.id)"
+            <input type="checkbox" :checked="isSelected(problem.id)" @change="toggleItem(problem.id)"
               class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-              :aria-label="`选择题目: ${problem.title}`"
-            />
+              :aria-label="`选择题目: ${problem.title}`" />
           </div>
 
           <!-- 题目信息 -->
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-3 mb-1">
-              <span class="text-xs font-mono text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+              <span
+                class="text-xs font-mono text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
                 #{{ problem.id }}
               </span>
               <h3 class="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -513,27 +494,24 @@ const executeSingleDelete = async () => {
 
             <!-- 移动端显示内容预览 -->
             <p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 md:hidden">
-              {{ problem.content.substring(0, 80) }}{{ problem.content.length > 80 ? '...' : '' }}
+              {{ problem.description.substring(0, 80) }}{{ problem.description.length > 80 ? '...' : '' }}
             </p>
 
             <!-- 桌面端显示更多内容 -->
             <p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 hidden md:block">
-              {{ problem.content.substring(0, 150) }}{{ problem.content.length > 150 ? '...' : '' }}
+              {{ problem.description.substring(0, 150) }}{{ problem.description.length > 150 ? '...' : '' }}
             </p>
           </div>
 
           <!-- 操作按钮 -->
           <div class="flex gap-1 flex-shrink-0">
             <button v-for="action in OJ_ACTION_BUTTONS" :key="action.type"
-                    @click="handleAction(action.handler, problem, $event)"
-                    :class="[
-                      'p-2 rounded-lg hover:scale-105 active:scale-95 transition-all duration-200 transform-gpu focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-sm',
-                      action.bgColor,
-                      action.textColor,
-                      action.hoverBg
-                    ]"
-                    :title="action.title"
-                    :aria-label="`${action.title}: ${problem.title}`">
+              @click="handleAction(action.handler, problem, $event)" :class="[
+                'p-2 rounded-lg hover:scale-105 active:scale-95 transition-all duration-200 transform-gpu focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-sm',
+                action.bgColor,
+                action.textColor,
+                action.hoverBg
+              ]" :title="action.title" :aria-label="`${action.title}: ${problem.title}`">
               <component :is="action.icon" class="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
@@ -551,9 +529,34 @@ const executeSingleDelete = async () => {
           class="block w-3/4 mx-auto text-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-800 dark:text-white transition-colors"
           placeholder="请输入题目标题" />
       </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">难度级别</label>
+          <select v-model="newProblem.difficulty"
+            class="block w-full text-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-800 dark:text-white transition-colors">
+            <option value="Easy">简单</option>
+            <option value="Medium">中等</option>
+            <option value="Hard">困难</option>
+          </select>
+        </div>
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">时间限制 (ms)</label>
+          <input v-model.number="newProblem.timeLimit" type="number" min="100" max="10000" step="100"
+            class="block w-full text-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-800 dark:text-white transition-colors"
+            placeholder="1000" />
+        </div>
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">内存限制 (MB)</label>
+          <input v-model.number="newProblem.memoryLimit" type="number" min="16" max="512" step="16"
+            class="block w-full text-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-800 dark:text-white transition-colors"
+            placeholder="128" />
+        </div>
+      </div>
+
       <div>
         <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">题目内容 (支持Markdown)</label>
-        <textarea v-model="newProblem.content"
+        <textarea v-model="newProblem.description"
           class="block w-3/4 mx-auto h-48 text-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-800 dark:text-white transition-colors resize-none"
           placeholder="请输入题目内容，支持Markdown格式"></textarea>
       </div>
@@ -663,7 +666,8 @@ const executeSingleDelete = async () => {
         <div v-if="testCases.length === 0"
           class="flex flex-col items-center justify-center p-8 text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
           <p class="mb-3 text-sm">请添加测试用例或上传文件</p>
-          <button @click="addTestCase" class="text-sm text-purple-600 dark:text-purple-400 hover:underline focus:outline-none focus:ring-2 focus:ring-purple-500 rounded">
+          <button @click="addTestCase"
+            class="text-sm text-purple-600 dark:text-purple-400 hover:underline focus:outline-none focus:ring-2 focus:ring-purple-500 rounded">
             点击添加第一个测试用例
           </button>
         </div>
@@ -690,13 +694,7 @@ const executeSingleDelete = async () => {
   </AdminModal>
 
   <!-- v4.0 删除确认对话框 -->
-  <ConfirmDialog
-    v-model:show="showConfirmDelete"
-    title="删除题目"
-    :content="`确定要删除题目 &quot;${problemToDelete?.title || ''}&quot; 吗？此操作不可恢复。`"
-    confirmText="删除"
-    cancelText="取消"
-    :danger="true"
-    @confirm="executeSingleDelete"
-  />
+  <ConfirmDialog v-model:show="showConfirmDelete" title="删除题目"
+    :content="`确定要删除题目 &quot;${problemToDelete?.title || ''}&quot; 吗？此操作不可恢复。`" confirmText="删除" cancelText="取消"
+    :danger="true" @confirm="executeSingleDelete" />
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, onUnmounted, markRaw, watch } from 'vue'
 import TypeIt from 'typeit'
+import type { Comment } from '@/types/api'
 
 // 动画配置常量
 const ANIMATION_CONFIG = {
@@ -13,7 +14,7 @@ const typeitTitle = ref<string>(' ')
 const typeitInstance = ref<TypeIt | null>(null)
 const props = defineProps<{
   title: string
-  comments: string[]
+  comments: Comment[]
   speed?: number
 }>()
 
@@ -26,10 +27,10 @@ const animatedComments = computed(() => {
   return [...props.comments]
     .sort(() => 0.5 - Math.random())
     .slice(0, Math.min(props.comments.length, Math.floor(Math.random() * 3) + 3))
-    .map(comment => {
+    .map(commentObj => {
       const direction = Math.random() > 0.5 ? 'from-right' : 'from-left'
       return {
-        comment,
+        comment: commentObj.content, // 从Comment对象中提取content字段
         animation: {
           class: direction,
           style: {

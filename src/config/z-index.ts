@@ -12,6 +12,7 @@ export const Z_INDEX = {
   // UI组件层级 (11-50)
   DROPDOWN: 15,
   TOOLTIP: 20,
+  PROGRESS_BAR: 25,
   THEME_TOGGLE: 30,
   NAVBAR: 40,
   MUSIC_PLAYER: 50,
@@ -45,6 +46,7 @@ export const Z_INDEX_VARS = {
   '--z-route-loading': Z_INDEX.ROUTE_LOADING,
   '--z-dropdown': Z_INDEX.DROPDOWN,
   '--z-tooltip': Z_INDEX.TOOLTIP,
+  '--z-progress-bar': Z_INDEX.PROGRESS_BAR,
   '--z-theme-toggle': Z_INDEX.THEME_TOGGLE,
   '--z-navbar': Z_INDEX.NAVBAR,
   '--z-music-player': Z_INDEX.MUSIC_PLAYER,

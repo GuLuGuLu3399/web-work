@@ -26,26 +26,21 @@ const onImageError = (event: Event) => {
 </script>
 
 <template>
-  <RouterLink :to="`/article/${article.id}`"
-    class="article-card-link">
+  <RouterLink :to="`/article/${article.id}`" class="article-card-link">
     <article class="article-card">
       <!-- 封面图片容器 -->
       <div class="cover-container">
         <!-- 实际图片 -->
-        <img 
-          v-if="article.coverUrl"
-          :src="article.coverUrl"
-          class="cover-image"
-          loading="lazy" 
-          alt="文章封面"
-          @load="onImageLoad"
-          @error="onImageError">
-        
+        <img v-if="article.coverUrl" :src="article.coverUrl" class="cover-image" loading="lazy" alt="文章封面"
+          @load="onImageLoad" @error="onImageError">
+
         <!-- 默认封面/占位符 -->
         <div v-else class="default-cover">
           <div class="default-cover-icon">
             <svg class="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+              </path>
             </svg>
           </div>
           <span class="default-cover-text">{{ article.title }}</span>
@@ -53,14 +48,6 @@ const onImageError = (event: Event) => {
 
         <!-- 渐变遮罩 -->
         <div class="cover-overlay"></div>
-        
-        <!-- 阅读时间标签 -->
-        <div class="reading-time">
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-          <span>{{ Math.max(Math.ceil((article.title?.length || 0) / 200), 1) }} 分钟</span>
-        </div>
       </div>
 
       <!-- 内容区域 -->
@@ -70,12 +57,12 @@ const onImageError = (event: Event) => {
         </div>
 
         <!-- 标签区域 -->
-        <div v-if="article.tags?.length" class="tags-container">
-          <span v-for="(tag, i) in article.tags.slice(0, 3)" :key="i" class="tag-item">
-            {{ tag }}
+        <div v-if="article.tagIds?.length" class="tags-container">
+          <span v-for="(tagId, i) in article.tagIds.slice(0, 3)" :key="i" class="tag-item">
+            标签{{ tagId }}
           </span>
-          <span v-if="article.tags.length > 3" class="tag-more">
-            +{{ article.tags.length - 3 }}
+          <span v-if="article.tagIds.length > 3" class="tag-more">
+            +{{ article.tagIds.length - 3 }}
           </span>
         </div>
 
@@ -86,16 +73,6 @@ const onImageError = (event: Event) => {
             <time :datetime="article.createdAt.toString()">
               {{ formatDate(article.createdAt.toString()) }}
             </time>
-          </div>
-          
-          <div class="meta-divider">•</div>
-          
-          <div class="meta-item">
-            <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-            </svg>
-            <span>{{ Math.floor(Math.random() * 1000) + 100 }} 次阅读</span>
           </div>
         </div>
       </div>
@@ -171,19 +148,6 @@ const onImageError = (event: Event) => {
   @apply opacity-100;
 }
 
-/* 阅读时间标签 */
-.reading-time {
-  @apply absolute top-3 right-3 flex items-center space-x-1;
-  @apply px-2 py-1 rounded-lg text-xs font-medium;
-  @apply bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-300;
-  @apply shadow-lg backdrop-blur-sm;
-  @apply transform translate-y-2 opacity-0 transition-all duration-300;
-}
-
-.article-card:hover .reading-time {
-  @apply translate-y-0 opacity-100;
-}
-
 /* 内容区域 */
 .content-area {
   @apply p-6 space-y-4;
@@ -225,7 +189,7 @@ const onImageError = (event: Event) => {
 
 /* 文章元信息 */
 .article-meta {
-  @apply flex items-center justify-between text-sm;
+  @apply flex items-center text-sm;
   @apply text-gray-500 dark:text-gray-400;
   @apply pt-3 border-t border-gray-100 dark:border-gray-700;
 }
@@ -258,19 +222,19 @@ const onImageError = (event: Event) => {
   .cover-container {
     @apply h-40;
   }
-  
+
   .content-area {
     @apply p-4 space-y-3;
   }
-  
+
   .article-title {
     @apply text-lg;
   }
-  
+
   .tags-container {
     @apply gap-1.5;
   }
-  
+
   .tag-item {
     @apply px-2 py-1 text-xs;
   }
@@ -281,7 +245,7 @@ const onImageError = (event: Event) => {
   .article-card {
     @apply shadow-gray-900/20;
   }
-  
+
   .article-card:hover {
     @apply shadow-blue-900/40;
   }
@@ -297,6 +261,7 @@ const onImageError = (event: Event) => {
 
 /* 无障碍优化 */
 @media (prefers-reduced-motion: reduce) {
+
   .article-card-link,
   .article-card,
   .cover-image,
@@ -314,7 +279,7 @@ const onImageError = (event: Event) => {
   .article-card {
     @apply border-gray-900 dark:border-gray-100;
   }
-  
+
   .tag-item {
     @apply border-gray-900 dark:border-gray-100;
   }

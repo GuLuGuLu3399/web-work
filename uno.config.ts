@@ -28,26 +28,15 @@ export default defineConfig({
     // 布局
     'flex-center': 'flex items-center justify-center',
     'grid-center': 'grid place-items-center',
-    'absolute-center': 'absolute inset-0 m-auto',
 
     // 按钮
     btn: [
       'relative font-medium whitespace-nowrap rounded-lg border',
-      'transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
+      'transition-all duration-200 ease-out',
       'focus-visible:(outline-none ring-2 ring-primary/50 ring-offset-2)',
-      'hover:brightness-[98%] active:scale-[0.98]',
+      'hover:brightness-[98%]',
       'disabled:(opacity-50 cursor-not-allowed grayscale)',
-      'overflow-hidden isolate',
-      'hover:transform-gpu hover:translate-y-[-1px]',
-      'active:translate-y-[1px]',
       'motion-safe:hover:shadow-md',
-      'after:(absolute inset-0 bg-white/10 opacity-0 transition-all duration-300)',
-      'hover:after:opacity-100 hover:after:scale-105',
-      'active:after:scale-150 active:after:opacity-0',
-      'active:after:transition-[transform,opacity] active:after:duration-500',
-      'before:(absolute left-0 top-0 h-0.5 w-full bg-current opacity-0 transition-opacity)',
-      'disabled:before:opacity-30',
-      'focus:before:opacity-50',
     ].join(' '),
     'btn-primary':
       'btn bg-primary text-white shadow-md hover:(bg-primary-hover shadow-lg) active:(bg-primary-active shadow-inner)',
@@ -65,7 +54,7 @@ export default defineConfig({
 
     // 卡片
     'card-base':
-      'p-6 rounded-lg border border-border/50 bg-background shadow-md hover:shadow-lg transition-all duration-500 ease-[cubic-bezier(0.22,0.61,0.36,1)] dark:border-dark-500 dark:hover:bg-dark-700',
+      'p-6 rounded-lg border border-border/50 bg-background shadow-md hover:shadow-lg transition-all duration-200 ease-out dark:border-dark-500 dark:hover:bg-dark-700',
     'card-disabled': 'card-base bg-muted cursor-not-allowed text-muted-foreground shadow-inner',
 
     // 过渡

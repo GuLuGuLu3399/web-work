@@ -194,10 +194,16 @@ body {
 
 
 html {
+  position: relative;
   overflow: auto;
   scroll-snap-type: y mandatory;
 }
 
 html::-webkit-scrollbar {
   display: none;
+}
+
+/* 确保body也有正确的定位 */
+body {
+  position: relative;
 }

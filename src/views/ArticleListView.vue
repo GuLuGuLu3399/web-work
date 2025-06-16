@@ -63,11 +63,23 @@ const filteredArticles = computed(() => {
   return articles
     .filter(article => {
       // Additional null checks for article properties
-      if (!article?.title || !article?.tags) return false
+      if (!article?.title) return false
 
       const titleMatch = article.title.toLowerCase().includes(searchTitle.value.toLowerCase())
-      const tagMatch = selectedTags.value.length === 0 ||
-        selectedTags.value.some(tag => article.tags?.includes(tag))
+
+      // 新的标签匹配逻辑：基于tagIds数组和标签名称
+      let tagMatch = true
+      if (selectedTags.value.length > 0) {
+        // 根据选中的标签名称找到对应的标签ID
+        const selectedTagIds = selectedTags.value
+          .map(tagName => allTags.value.find(tag => tag.name === tagName)?.id)
+          .filter(Boolean) as number[]
+
+        // 检查文章的tagIds数组是否包含任何选中的标签ID
+        tagMatch = selectedTagIds.length === 0 ||
+          (article.tagIds && selectedTagIds.some(tagId => article.tagIds.includes(tagId)))
+      }
+
       return titleMatch && tagMatch
     })
     .sort((a, b) => {
@@ -126,17 +138,21 @@ const updateSelectedTags = (val: string[]) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900 dark:to-indigo-900">
+  <div
+    class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900 dark:to-indigo-900">
     <!-- 页面头部装饰 -->
     <div class="relative overflow-hidden">
-      <div class="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 dark:from-blue-400/5 dark:to-purple-400/5"></div>
+      <div
+        class="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 dark:from-blue-400/5 dark:to-purple-400/5">
+      </div>
       <div class="absolute -top-4 -right-4 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl"></div>
       <div class="absolute -bottom-4 -left-4 w-72 h-72 bg-purple-400/20 rounded-full blur-3xl"></div>
     </div>
 
     <div class="container mx-auto px-4 py-8 relative">
       <!-- 筛选组件 -->
-      <div class="backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 rounded-2xl p-6 mb-8 shadow-xl border border-white/20">
+      <div
+        class="backdrop-blur-sm bg-white/70 dark:bg-gray-800/70 rounded-2xl p-6 mb-8 shadow-xl border border-white/20">
         <ArticleFilter :available-tags="availableTags" :initial-search-title="searchTitle"
           :initial-selected-tags="selectedTags" @update:search-title="updateSearchTitle"
           @update:selected-tags="updateSelectedTags" />
@@ -156,16 +172,22 @@ const updateSelectedTags = (val: string[]) => {
       </div>
 
       <div v-else-if="error" class="error-state">
-        <div class="backdrop-blur-sm bg-red-50/80 dark:bg-red-900/20 rounded-2xl p-8 text-center border border-red-200/50">
-          <div class="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center">
+        <div
+          class="backdrop-blur-sm bg-red-50/80 dark:bg-red-900/20 rounded-2xl p-8 text-center border border-red-200/50">
+          <div
+            class="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center">
             <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 19c-.77.833.192 2.5 1.732 2.5z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 19c-.77.833.192 2.5 1.732 2.5z">
+              </path>
             </svg>
           </div>
           <p class="text-red-700 dark:text-red-300 text-lg font-medium mb-4">{{ error }}</p>
           <button class="retry-btn" @click="onMounted">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+              </path>
             </svg>
             重试加载
           </button>
@@ -173,10 +195,14 @@ const updateSelectedTags = (val: string[]) => {
       </div>
 
       <div v-else-if="isEmpty" class="empty-state">
-        <div class="backdrop-blur-sm bg-gray-50/80 dark:bg-gray-800/50 rounded-2xl p-12 text-center border border-gray-200/50">
-          <div class="w-20 h-20 mx-auto mb-6 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+        <div
+          class="backdrop-blur-sm bg-gray-50/80 dark:bg-gray-800/50 rounded-2xl p-12 text-center border border-gray-200/50">
+          <div
+            class="w-20 h-20 mx-auto mb-6 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
             <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+              </path>
             </svg>
           </div>
           <h3 class="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">没有找到文章</h3>
@@ -184,106 +210,96 @@ const updateSelectedTags = (val: string[]) => {
         </div>
       </div>
 
-    <!-- 文章网格 -->
-    <div v-else class="articles-section">
-      <!-- 智能标题栏：主标题 + 统计信息 + 分页控制 -->
-      <div class="smart-header">
-        <div class="header-left">
-          <div class="flex items-center space-x-4">
-            <!-- 主标题区域 -->
-            <div class="main-title-section">
-              <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-1">
-                文章集合
-              </h1>
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                探索知识的海洋，发现精彩内容
-              </p>
-            </div>
-            
-            <!-- 分隔线 -->
-            <div class="w-px h-12 bg-gradient-to-b from-blue-300 to-purple-300 dark:from-blue-600 dark:to-purple-600"></div>
-            
-            <!-- 统计信息 -->
-            <div class="stats-section">
-              <div class="flex items-center space-x-2 mb-1">
-                <div class="w-2 h-6 bg-gradient-to-b from-blue-500 to-purple-500 rounded-full"></div>
-                <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                  共 <span class="text-blue-600 dark:text-blue-400">{{ totalItems }}</span> 篇文章
-                </h2>
+      <!-- 文章网格 -->
+      <div v-else class="articles-section">
+        <!-- 智能标题栏：主标题 + 统计信息 + 分页控制 -->
+        <div class="smart-header">
+          <div class="header-left">
+            <div class="flex items-center space-x-4">
+              <!-- 主标题区域 -->
+              <div class="main-title-section">
+                <h1
+                  class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-1">
+                  文章集合
+                </h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  探索知识的海洋，发现精彩内容
+                </p>
               </div>
-              <p class="text-sm text-gray-500 dark:text-gray-400 ml-4">
-                当前显示第 {{ currentPage }} 页，每页 {{ pageSize }} 篇
-              </p>
+
+              <!-- 分隔线 -->
+              <div class="w-px h-12 bg-gradient-to-b from-blue-300 to-purple-300 dark:from-blue-600 dark:to-purple-600">
+              </div>
+
+              <!-- 统计信息 -->
+              <div class="stats-section">
+                <div class="flex items-center space-x-2 mb-1">
+                  <div class="w-2 h-6 bg-gradient-to-b from-blue-500 to-purple-500 rounded-full"></div>
+                  <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                    共 <span class="text-blue-600 dark:text-blue-400">{{ totalItems }}</span> 篇文章
+                  </h2>
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400 ml-4">
+                  当前显示第 {{ currentPage }} 页，每页 {{ pageSize }} 篇
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 内嵌分页控制 -->
+          <div v-if="totalPages > 1" class="header-pagination">
+            <div class="pagination-mini">
+              <!-- 上一页 -->
+              <button class="page-nav-btn" :disabled="currentPage === 1" @click="prevPage"
+                :class="{ 'nav-disabled': currentPage === 1 }" title="上一页">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+              </button>
+
+              <!-- 页码显示/快速跳转 -->
+              <div class="page-selector">
+                <span class="page-info">{{ currentPage }}</span>
+                <span class="page-divider">/</span>
+                <span class="page-total">{{ totalPages }}</span>
+
+                <!-- 快速跳转下拉 -->
+                <select :value="currentPage" @change="goToPage(parseInt(($event.target as HTMLSelectElement).value))"
+                  class="page-select" title="快速跳转到指定页">
+                  <option v-for="page in totalPages" :key="page" :value="page">
+                    第 {{ page }} 页
+                  </option>
+                </select>
+              </div>
+
+              <!-- 下一页 -->
+              <button class="page-nav-btn" :disabled="currentPage === totalPages" @click="nextPage"
+                :class="{ 'nav-disabled': currentPage === totalPages }" title="下一页">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- 页码信息 -->
+            <div class="page-info-text">
+              <span class="text-xs text-gray-500 dark:text-gray-400">
+                共 {{ totalPages }} 页
+              </span>
             </div>
           </div>
         </div>
 
-        <!-- 内嵌分页控制 -->
-        <div v-if="totalPages > 1" class="header-pagination">
-          <div class="pagination-mini">
-            <!-- 上一页 -->
-            <button 
-              class="page-nav-btn"
-              :disabled="currentPage === 1"
-              @click="prevPage"
-              :class="{ 'nav-disabled': currentPage === 1 }"
-              title="上一页">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-              </svg>
-            </button>
-
-            <!-- 页码显示/快速跳转 -->
-            <div class="page-selector">
-              <span class="page-info">{{ currentPage }}</span>
-              <span class="page-divider">/</span>
-              <span class="page-total">{{ totalPages }}</span>
-              
-              <!-- 快速跳转下拉 -->
-              <select 
-                :value="currentPage" 
-                @change="goToPage(parseInt(($event.target as HTMLSelectElement).value))"
-                class="page-select"
-                title="快速跳转到指定页">
-                <option v-for="page in totalPages" :key="page" :value="page">
-                  第 {{ page }} 页
-                </option>
-              </select>
-            </div>
-
-            <!-- 下一页 -->
-            <button 
-              class="page-nav-btn"
-              :disabled="currentPage === totalPages"
-              @click="nextPage"
-              :class="{ 'nav-disabled': currentPage === totalPages }"
-              title="下一页">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-              </svg>
-            </button>
-          </div>
-
-          <!-- 页码信息 -->
-          <div class="page-info-text">
-            <span class="text-xs text-gray-500 dark:text-gray-400">
-              共 {{ totalPages }} 页
-            </span>
-          </div>
+        <!-- 文章卡片网格 -->
+        <div class="article-grid">
+          <ArticleCard v-for="(article, index) in paginatedArticles" :key="article.id" :article="article"
+            :style="{ animationDelay: `${index * 0.1}s` }" class="article-card-animated" />
         </div>
+
+
       </div>
-
-      <!-- 文章卡片网格 -->
-      <div class="article-grid">
-        <ArticleCard v-for="(article, index) in paginatedArticles" :key="article.id" :article="article" 
-          :style="{ animationDelay: `${index * 0.1}s` }" 
-          class="article-card-animated" />
-      </div>
-
-
     </div>
   </div>
-</div>
 </template>
 
 <style scoped>
@@ -412,7 +428,7 @@ const updateSelectedTags = (val: string[]) => {
     @apply w-full;
   }
 
-  .header-left > div {
+  .header-left>div {
     @apply flex-col space-x-0 space-y-4 items-start;
   }
 
@@ -458,12 +474,12 @@ const updateSelectedTags = (val: string[]) => {
     @apply mt-2;
   }
 
-  .header-left > div {
+  .header-left>div {
     @apply space-y-3;
   }
 
   /* 隐藏分隔线在小屏幕上 */
-  .header-left > div > div:nth-child(2) {
+  .header-left>div>div:nth-child(2) {
     @apply hidden;
   }
 }
@@ -473,7 +489,7 @@ const updateSelectedTags = (val: string[]) => {
   .smart-header {
     @apply shadow-gray-900/20;
   }
-  
+
   .page-nav-btn:hover:not(.nav-disabled) {
     @apply shadow-blue-500/25;
   }

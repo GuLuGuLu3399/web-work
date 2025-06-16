@@ -5,7 +5,7 @@ import Modal from '@/components/composable/BaseModal.vue'
 import OJResultPanel from '@/components/oj/OJResultPanel.vue'
 import OJLanguageSelector from '@/components/oj/OJLanguageSelector.vue'
 import { api } from '@/api'
-import type { JudgeResult } from '@/types/api'
+import type { JudgeResult, OJProblem } from '@/types/api'
 
 // CodeMirror 导入
 import Codemirror from "codemirror-editor-vue3"
@@ -62,10 +62,10 @@ const code = ref(LANGUAGES[0].template)
 const isModalOpen = ref(false)
 const isLoading = ref(true)
 const error = ref<Error | null>(null)
-const problemData = ref<{ title: string; content: string } | null>(null)
+const problemData = ref<OJProblem | null>(null)
 
 // 判题相关状态
-const judgeStatus = ref<(JudgeResult & { token?: string }) | null>(null)
+const judgeStatus = ref<JudgeResult | null>(null)
 const tokens = ref<string[]>([])
 const pollingInterval = ref<number>()
 const submitStatus = ref<'idle' | 'loading' | 'polling'>('idle')
@@ -111,12 +111,12 @@ const submitCode = async () => {
     const languageId = LANGUAGE_ID_MAP[currentLanguage.value]
     const res = await api.submitCode({
       tid: problemId.value,
-      source_code: code.value,
-      language_id: languageId
+      sourceCode: code.value,
+      languageId: languageId
     })
 
-    if (res.status && res.data?.tokens?.length) {
-      tokens.value = res.data.tokens
+    if (res.status && res.data?.token) {
+      tokens.value = [res.data.token] // 后端返回单个token，转换为数组格式
       submitStatus.value = 'polling' // 设置为轮询状态
       isModalOpen.value = false // 提交成功后关闭弹窗
       startPolling()
@@ -138,7 +138,18 @@ const startPolling = () => {
     // 超时检查
     if (Date.now() - startTime > TIMEOUT) {
       stopPolling()
-      judgeStatus.value = { status: true, msg: 'TIMEOUT' }
+      judgeStatus.value = {
+        id: 0,
+        problemId: problemId.value,
+        code: '',
+        language: '',
+        status: 'TIMEOUT',
+        isCompleted: true,
+        executeTime: 0,
+        memoryUsage: 0,
+        submitTime: new Date().toISOString(),
+        judgeToken: tokens.value[0] || ''
+      }
       submitStatus.value = 'idle' // 超时后重置状态
       return
     }
@@ -147,9 +158,14 @@ const startPolling = () => {
 
     try {
       const res = await api.getJudgeResult(tokens.value[0])
-      if (res.status && res.msg) {
-        judgeStatus.value = { ...res, token: tokens.value[0] }
-        if (res.status === true) {
+      console.log('轮询获取判题结果:', res)
+      if (res.status && res.data) {
+        judgeStatus.value = res.data
+        console.log('判题状态:', res.data.status, '是否完成:', res.data.isCompleted)
+
+        // 使用后端返回的isCompleted字段判断是否完成
+        if (res.data.isCompleted) {
+          console.log('判题完成，停止轮询')
           stopPolling()
           submitStatus.value = 'idle' // 判题完成后重置状态
         }
@@ -211,10 +227,13 @@ onUnmounted(stopPolling)
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-emerald-50 via-cyan-50 to-blue-50 dark:from-emerald-900 dark:via-cyan-900 dark:to-blue-900">
+  <div
+    class="min-h-screen bg-gradient-to-br from-emerald-50 via-cyan-50 to-blue-50 dark:from-emerald-900 dark:via-cyan-900 dark:to-blue-900">
     <!-- 页面头部装饰 -->
     <div class="relative overflow-hidden">
-      <div class="absolute inset-0 bg-gradient-to-r from-emerald-600/10 to-cyan-600/10 dark:from-emerald-400/5 dark:to-cyan-400/5"></div>
+      <div
+        class="absolute inset-0 bg-gradient-to-r from-emerald-600/10 to-cyan-600/10 dark:from-emerald-400/5 dark:to-cyan-400/5">
+      </div>
       <div class="absolute -top-4 -right-4 w-72 h-72 bg-emerald-400/20 rounded-full blur-3xl"></div>
       <div class="absolute -bottom-4 -left-4 w-72 h-72 bg-cyan-400/20 rounded-full blur-3xl"></div>
     </div>
@@ -226,7 +245,8 @@ onUnmounted(stopPolling)
           <div class="flex items-center space-x-4">
             <!-- 题目信息 -->
             <div class="problem-info">
-              <h1 class="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent mb-1">
+              <h1
+                class="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent mb-1">
                 {{ problemData?.title || '加载中...' }}
               </h1>
               <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -236,7 +256,8 @@ onUnmounted(stopPolling)
             </div>
 
             <!-- 分隔线 -->
-            <div class="w-px h-12 bg-gradient-to-b from-emerald-300 to-cyan-300 dark:from-emerald-600 dark:to-cyan-600"></div>
+            <div class="w-px h-12 bg-gradient-to-b from-emerald-300 to-cyan-300 dark:from-emerald-600 dark:to-cyan-600">
+            </div>
 
             <!-- 语言信息 -->
             <div class="language-info">
@@ -256,11 +277,11 @@ onUnmounted(stopPolling)
         <!-- 操作按钮 -->
         <div class="header-actions">
           <div class="flex gap-3">
-            <button
-              @click="isModalOpen = true"
-              class="action-btn primary">
+            <button @click="isModalOpen = true" class="action-btn primary">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4">
+                </path>
               </svg>
               编写代码
             </button>
@@ -279,9 +300,12 @@ onUnmounted(stopPolling)
 
         <div v-else-if="error" class="error-state">
           <div class="text-center py-12">
-            <div class="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center">
+            <div
+              class="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center">
               <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 19c-.77.833.192 2.5 1.732 2.5z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 19c-.77.833.192 2.5 1.732 2.5z">
+                </path>
               </svg>
             </div>
             <h3 class="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">加载失败</h3>
@@ -292,7 +316,7 @@ onUnmounted(stopPolling)
 
         <div v-else class="problem-detail">
           <div class="prose max-w-none dark:prose-invert">
-            <pre class="problem-text">{{ problemData?.content || '题目内容加载中...' }}</pre>
+            <pre class="problem-text">{{ problemData?.description || '题目内容加载中...' }}</pre>
           </div>
         </div>
       </div>
@@ -302,7 +326,9 @@ onUnmounted(stopPolling)
         <div class="polling-content">
           <div class="polling-icon">
             <svg class="w-6 h-6 animate-spin text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+              </path>
             </svg>
           </div>
           <div class="polling-text">
@@ -311,7 +337,8 @@ onUnmounted(stopPolling)
           </div>
         </div>
       </div>
-      <OJResultPanel v-if="judgeStatus" :status="judgeStatus.status" :msg="judgeStatus.msg" />
+      <OJResultPanel v-if="judgeStatus" :status="judgeStatus.status === 'ACCEPTED' || judgeStatus.status === 'Accepted'"
+        :msg="judgeStatus.status" />
 
       <!-- 代码编辑器弹窗 -->
       <Modal :show="isModalOpen" @close-show="isModalOpen = false">
@@ -338,7 +365,9 @@ onUnmounted(stopPolling)
             <div class="toolbar-right">
               <button @click="resetCode" class="toolbar-btn">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                  </path>
                 </svg>
                 重置
               </button>
@@ -347,11 +376,7 @@ onUnmounted(stopPolling)
 
           <!-- 代码编辑器 -->
           <div class="editor-container">
-            <Codemirror
-              v-model:value="code"
-              :options="codemirrorOptions"
-              height="450px"
-              width="100%"
+            <Codemirror v-model:value="code" :options="codemirrorOptions" height="450px" width="100%"
               class="code-editor" />
           </div>
 
@@ -363,29 +388,30 @@ onUnmounted(stopPolling)
               </p>
             </div>
             <div class="footer-right">
-              <button
-                @click="submitCode"
-                :disabled="!canSubmit"
-                class="submit-btn">
+              <button @click="submitCode" :disabled="!canSubmit" class="submit-btn">
                 <span v-if="isSubmitting" class="loading-icon">
                   <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                    </path>
                   </svg>
                 </span>
                 <span v-else-if="isPolling" class="polling-icon">
                   <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
                 </span>
                 <span v-else class="submit-icon">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
                   </svg>
                 </span>
                 {{
                   isSubmitting ? '提交中...' :
-                  isPolling ? '等待结果...' :
-                  '提交代码'
+                    isPolling ? '等待结果...' :
+                      '提交代码'
                 }}
               </button>
             </div>
@@ -465,7 +491,8 @@ onUnmounted(stopPolling)
   @apply font-mono whitespace-pre-wrap;
 }
 
-.loading-state, .error-state {
+.loading-state,
+.error-state {
   @apply p-8;
 }
 
@@ -548,7 +575,7 @@ onUnmounted(stopPolling)
     @apply flex-col items-stretch gap-4 p-6;
   }
 
-  .header-left > div {
+  .header-left>div {
     @apply flex-col space-x-0 space-y-4 items-start;
   }
 
@@ -591,7 +618,7 @@ onUnmounted(stopPolling)
   }
 
   /* 隐藏分隔线在小屏幕上 */
-  .header-left > div > div:nth-child(2) {
+  .header-left>div>div:nth-child(2) {
     @apply hidden;
   }
 

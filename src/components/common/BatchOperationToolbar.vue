@@ -1,25 +1,17 @@
 <template>
   <!-- 批量操作工具栏 -->
-  <div
-    v-if="hasSelection || alwaysShow"
-    class="batch-toolbar"
-    :class="[
-      'flex items-center justify-between gap-4 p-4',
-      'bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-lg',
-      'transition-all duration-300',
-      hasSelection ? 'opacity-100 scale-100' : 'opacity-60 scale-95'
-    ]"
-    role="toolbar"
-    :aria-label="`批量操作工具栏，已选择 ${selectedCount} 个项目`"
-  >
+  <div v-if="hasSelection || alwaysShow" class="batch-toolbar" :class="[
+    'flex items-center justify-between gap-4 p-4 mb-4',
+    'bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-lg',
+    'transition-all duration-300',
+    hasSelection ? 'opacity-100 scale-100' : 'opacity-60 scale-95'
+  ]" role="toolbar" :aria-label="`批量操作工具栏，已选择 ${selectedCount} 个项目`">
     <!-- 左侧：选择信息 -->
     <div class="flex items-center gap-4">
       <!-- 选择计数 -->
       <div class="flex items-center gap-2">
-        <div
-          class="w-4 h-4 rounded border-2 border-primary bg-primary text-white flex items-center justify-center"
-          :aria-label="`已选择 ${selectedCount} 个项目`"
-        >
+        <div class="w-4 h-4 rounded border-2 border-primary bg-primary text-white flex items-center justify-center"
+          :aria-label="`已选择 ${selectedCount} 个项目`">
           <CheckIcon class="w-3 h-3" />
         </div>
         <span class="text-sm font-medium text-gray-900 dark:text-white">
@@ -28,12 +20,9 @@
       </div>
 
       <!-- 全选/取消全选 -->
-      <button
-        v-if="showSelectAll"
-        @click="handleSelectAll"
+      <button v-if="showSelectAll" @click="handleSelectAll"
         class="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
-        :aria-label="isAllSelected ? '取消全选' : '全选'"
-      >
+        :aria-label="isAllSelected ? '取消全选' : '全选'">
         {{ isAllSelected ? '取消全选' : `全选 (${totalCount})` }}
       </button>
     </div>
@@ -42,13 +31,9 @@
     <div class="flex items-center gap-2">
       <!-- 操作按钮组 -->
       <div class="flex items-center gap-1" role="group" aria-label="批量操作">
-        <button
-          v-for="operation in availableOperations"
-          :key="operation.id"
-          @click="executeOperation(operation)"
+        <button v-for="operation in availableOperations" :key="operation.id" @click="executeOperation(operation)"
           :disabled="isProcessing || (operation.disabled && operation.disabled(selectedItems))"
-          class="batch-operation-btn"
-          :class="[
+          class="batch-operation-btn" :class="[
             'inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg',
             'border transition-all duration-200',
             operation.isDestructive
@@ -56,9 +41,7 @@
               : 'text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'focus:outline-none focus:ring-2 focus:ring-primary/50'
-          ]"
-          :aria-label="`${operation.label}选中的项目`"
-        >
+          ]" :aria-label="`${operation.label}选中的项目`">
           <component :is="getOperationIcon(operation.icon)" class="w-4 h-4" />
           {{ operation.label }}
         </button>
@@ -66,61 +49,38 @@
 
       <!-- 更多操作下拉菜单 -->
       <div v-if="moreOperations.length > 0" class="relative" ref="dropdownRef">
-        <button
-          @click="showMoreMenu = !showMoreMenu"
-          class="more-operations-btn"
-          :class="[
-            'inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg',
-            'text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700',
-            'hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors',
-            'focus:outline-none focus:ring-2 focus:ring-primary/50'
-          ]"
-          :aria-expanded="showMoreMenu"
-          aria-haspopup="true"
-          aria-label="更多批量操作"
-        >
+        <button @click="showMoreMenu = !showMoreMenu" class="more-operations-btn" :class="[
+          'inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg',
+          'text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700',
+          'hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors',
+          'focus:outline-none focus:ring-2 focus:ring-primary/50'
+        ]" :aria-expanded="showMoreMenu" aria-haspopup="true" aria-label="更多批量操作">
           <EllipsisHorizontalIcon class="w-4 h-4" />
           更多
           <ChevronDownIcon class="w-3 h-3" :class="{ 'rotate-180': showMoreMenu }" />
         </button>
 
         <!-- 下拉菜单 -->
-        <Transition
-          enter-active-class="transition ease-out duration-200"
-          enter-from-class="transform opacity-0 scale-95"
-          enter-to-class="transform opacity-100 scale-100"
-          leave-active-class="transition ease-in duration-150"
-          leave-from-class="transform opacity-100 scale-100"
-          leave-to-class="transform opacity-0 scale-95"
-        >
-          <div
-            v-if="showMoreMenu"
-            class="more-operations-menu"
-            :class="[
-              'absolute right-0 top-full mt-2 w-48',
-              { 'z-[15]': true }, // Dropdown level
-              'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-              'rounded-lg shadow-lg py-1'
-            ]"
-            role="menu"
-            aria-label="更多批量操作菜单"
-          >
-            <button
-              v-for="operation in moreOperations"
-              :key="operation.id"
-              @click="executeOperation(operation)"
+        <Transition enter-active-class="transition ease-out duration-200"
+          enter-from-class="transform opacity-0 scale-95" enter-to-class="transform opacity-100 scale-100"
+          leave-active-class="transition ease-in duration-150" leave-from-class="transform opacity-100 scale-100"
+          leave-to-class="transform opacity-0 scale-95">
+          <div v-if="showMoreMenu" class="more-operations-menu" :class="[
+            'absolute right-0 top-full mt-2 w-48',
+            { 'z-[15]': true }, // Dropdown level
+            'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+            'rounded-lg shadow-lg py-1'
+          ]" role="menu" aria-label="更多批量操作菜单">
+            <button v-for="operation in moreOperations" :key="operation.id" @click="executeOperation(operation)"
               :disabled="isProcessing || (operation.disabled && operation.disabled(selectedItems))"
-              class="more-operation-item"
-              :class="[
+              class="more-operation-item" :class="[
                 'w-full flex items-center gap-3 px-4 py-2 text-sm text-left',
                 'hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
                 operation.isDestructive
                   ? 'text-red-700 dark:text-red-400'
                   : 'text-gray-700 dark:text-gray-300'
-              ]"
-              role="menuitem"
-            >
+              ]" role="menuitem">
               <component :is="getOperationIcon(operation.icon)" class="w-4 h-4" />
               {{ operation.label }}
             </button>
@@ -129,17 +89,12 @@
       </div>
 
       <!-- 清除选择 -->
-      <button
-        @click="$emit('clear-selection')"
-        class="clear-selection-btn"
-        :class="[
-          'inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg',
-          'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
-          'hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors',
-          'focus:outline-none focus:ring-2 focus:ring-primary/50'
-        ]"
-        aria-label="清除选择"
-      >
+      <button @click="$emit('clear-selection')" class="clear-selection-btn" :class="[
+        'inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg',
+        'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
+        'hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors',
+        'focus:outline-none focus:ring-2 focus:ring-primary/50'
+      ]" aria-label="清除选择">
         <XMarkIcon class="w-4 h-4" />
         清除
       </button>
@@ -147,10 +102,7 @@
   </div>
 
   <!-- 批量操作进度对话框 -->
-  <BaseModal
-    :show="showProgressDialog"
-    @CloseShow="() => { if (!isProcessing) showProgressDialog = false }"
-  >
+  <BaseModal :show="showProgressDialog" @CloseShow="() => { if (!isProcessing) showProgressDialog = false }">
     <div class="p-6 space-y-6">
       <!-- 对话框头部 -->
       <div class="flex items-center gap-3 mb-6">
@@ -175,11 +127,8 @@
 
         <!-- 进度条 -->
         <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-          <div
-            class="bg-primary rounded-full h-2 transition-all duration-300"
-            :style="{ width: progressPercentage + '%' }"
-            :aria-label="`进度 ${progressPercentage}%`"
-          ></div>
+          <div class="bg-primary rounded-full h-2 transition-all duration-300"
+            :style="{ width: progressPercentage + '%' }" :aria-label="`进度 ${progressPercentage}%`"></div>
         </div>
 
         <!-- 当前处理项目 -->
@@ -209,15 +158,13 @@
 
           <!-- 错误详情（可展开） -->
           <details class="group">
-            <summary class="cursor-pointer text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
+            <summary
+              class="cursor-pointer text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
               查看错误详情
             </summary>
             <div class="mt-2 max-h-32 overflow-y-auto">
-              <div
-                v-for="(error, index) in operationResult.errors"
-                :key="index"
-                class="text-xs text-red-600 dark:text-red-400 p-2 bg-red-50 dark:bg-red-900/10 rounded border-l-2 border-red-200 dark:border-red-800"
-              >
+              <div v-for="(error, index) in operationResult.errors" :key="index"
+                class="text-xs text-red-600 dark:text-red-400 p-2 bg-red-50 dark:bg-red-900/10 rounded border-l-2 border-red-200 dark:border-red-800">
                 <div class="font-medium">{{ getItemDisplayName(error.item) }}</div>
                 <div class="text-red-500 dark:text-red-400">{{ error.error }}</div>
               </div>
@@ -233,18 +180,12 @@
 
       <!-- 对话框底部按钮 -->
       <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-        <button
-          v-if="!isProcessing"
-          @click="showProgressDialog = false"
-          class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-        >
+        <button v-if="!isProcessing" @click="showProgressDialog = false"
+          class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
           关闭
         </button>
-        <button
-          v-if="isProcessing"
-          @click="cancelCurrentOperation"
-          class="px-4 py-2 text-sm font-medium text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-        >
+        <button v-if="isProcessing" @click="cancelCurrentOperation"
+          class="px-4 py-2 text-sm font-medium text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
           取消操作
         </button>
       </div>
@@ -369,7 +310,14 @@ const getStageText = (stage: string): string => {
   return stageTexts[stage as keyof typeof stageTexts] || '处理中...'
 }
 
-const getItemDisplayName = (item: any): string => {
+interface DisplayableItem {
+  name?: string
+  title?: string
+  label?: string
+  id?: string | number
+}
+
+const getItemDisplayName = (item: DisplayableItem): string => {
   return item?.name || item?.title || item?.label || item?.id?.toString() || '未知项目'
 }
 
@@ -434,6 +382,7 @@ onUnmounted(() => {
 
 /* 无障碍优化 */
 @media (prefers-reduced-motion: reduce) {
+
   .batch-toolbar,
   .batch-operation-btn,
   .more-operations-btn,

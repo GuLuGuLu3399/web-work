@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue'
+
 import { ExclamationTriangleIcon } from '@heroicons/vue/24/outline'
 import { BASE_CLASSES } from '@/config/admin'
 
@@ -48,7 +48,7 @@ const confirm = () => {
       <div class="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="close"></div>
 
-        <div
+        <div role="alertdialog" :aria-label="`确认对话框: ${title}`" aria-modal="true"
           :class="[BASE_CLASSES.card, 'relative transform overflow-hidden text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg']">
 
           <div class="p-6">

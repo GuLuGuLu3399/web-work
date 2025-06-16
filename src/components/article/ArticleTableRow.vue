@@ -3,15 +3,25 @@ import { ref } from 'vue'
 import { TrashIcon } from '@heroicons/vue/24/outline'
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue'
 import { useFormatDate } from '@/composables/useFormatDate'
-import type { ArticleSummary } from '@/types/api'
+import type { ArticleSummary, Tag } from '@/types/api'
 
 const props = defineProps<{
   article: ArticleSummary
   selected?: boolean
+  tags?: Tag[] // 添加tags prop
 }>()
 
 const emit = defineEmits(['update:selected', 'delete'])
 const isDeleteModalOpen = ref(false)
+
+// 根据tagIds获取标签名称
+const getTagNames = (tagIds: number[]) => {
+  if (!props.tags) return []
+  return tagIds.map(id => {
+    const tag = props.tags!.find(t => t.id === id)
+    return tag ? tag.name : ''
+  }).filter(Boolean)
+}
 
 const handleDelete = () => {
   emit('delete', props.article.id)
@@ -36,7 +46,8 @@ const { formatDate } = useFormatDate()
     </td>
     <td class="px-6 py-4 whitespace-nowrap">
       <div class="flex flex-wrap gap-1">
-        <span v-for="tag in article.tags" :key="tag" class="tag-item text-success bg-success/10 hover:bg-success/20">
+        <span v-for="tag in getTagNames(article.tagIds)" :key="tag"
+          class="tag-item text-success bg-success/10 hover:bg-success/20">
           {{ tag }}
         </span>
       </div>
@@ -46,12 +57,15 @@ const { formatDate } = useFormatDate()
     </td>
     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
       <button @click="(e: MouseEvent) => { e.preventDefault(); isDeleteModalOpen = true }"
-        class="p-2 bg-purple-50 rounded-md text-red-600 hover:bg-purple-100 hover:scale-105 active:scale-95 transition-all duration-200 transform-gpu">
-        <TrashIcon class="h-5 w-5 " />
+        :tabindex="isDeleteModalOpen ? -1 : 0"
+        class="p-2 bg-purple-50 rounded-md text-red-600 hover:bg-purple-100 hover:scale-105 active:scale-95 transition-all duration-200 transform-gpu focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-sm"
+        aria-label="删除文章">
+        <TrashIcon class="h-5 w-5" aria-hidden="true" />
       </button>
 
       <TransitionRoot appear :show="isDeleteModalOpen" as="template">
-        <Dialog as="div" @close="isDeleteModalOpen = false" class="relative" :style="{ zIndex: 70 }"><!-- Modal level -->
+        <Dialog as="div" @close="isDeleteModalOpen = false" class="relative" :style="{ zIndex: 70 }">
+          <!-- Modal level -->
           <TransitionChild enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100"
             leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
             <div class="fixed inset-0 bg-black/25"></div>
